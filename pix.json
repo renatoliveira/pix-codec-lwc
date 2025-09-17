@@ -1,0 +1,101 @@
+{
+  "value": [
+    {
+      "id": "00",
+      "description": "Payload Format Indicator",
+      "length": "02",
+      "value": "01"
+    },
+    {
+      "id": "26",
+      "description": "Merchant Account Information",
+      "length": "variable",
+      "value": [
+        {
+          "id": "00",
+          "length": "14",
+          "value": "BR.GOV.BCB.PIX"
+        },
+        {
+          "id": "01",
+          "length": "variable",
+          "value": "23484225000166"
+        }
+      ]
+    },
+    {
+      "id": "52",
+      "description": "Merchant Category Code (MCC)",
+      "length": "04",
+      "value": "0000"
+    },
+    {
+      "id": "53",
+      "description": "Transaction Currency",
+      "length": "03",
+      "value": "986"
+    },
+    {
+      "id": "54",
+      "description": "Transaction Amount",
+      "length": "variable",
+      "value": "123.45"
+    },
+    {
+      "id": "58",
+      "description": "Country Code",
+      "length": "02",
+      "value": "BR"
+    },
+    {
+      "id": "59",
+      "description": "Merchant Name",
+      "length": "variable",
+      "value": "NOME DA EMPRESA LTDA"
+    },
+    {
+      "id": "60",
+      "description": "Merchant City",
+      "length": "variable",
+      "value": "SAO PAULO"
+    },
+    {
+      "id": "62",
+      "description": "Additional Data Field Template",
+      "length": "variable",
+      "value": [
+        {
+          "id": "05",
+          "description": "Transaction ID",
+          "length": "variable",
+          "value": "***1234"
+        },
+        {
+          "id": "50",
+          "description": "Payment system specific template",
+          "length": "variable",
+          "value": [
+            {
+              "id": "00",
+              "description": "GUI",
+              "length": "17",
+              "value": "BR.GOV.BCB.BRCODE"
+            },
+            {
+              "id": "01",
+              "description": "version",
+              "length": "05",
+              "value": "1.0.0"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "63",
+      "description": "CRC16 - result's 4 nibbles",
+      "length": "04",
+      "value": "ABCD"
+    }
+  ]
+}
