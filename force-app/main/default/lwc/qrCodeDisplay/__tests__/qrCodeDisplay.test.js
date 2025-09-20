@@ -217,4 +217,167 @@ describe("c-qr-code-display", () => {
     expect(PixCodec.encode).not.toHaveBeenCalled();
     expect(element.pixCode).toBeUndefined();
   });
+
+  describe("@api generatePixCodeFromPaymentData", () => {
+    it("should generate PIX code when called directly with valid payment data", async () => {
+      // Arrange
+      const mockPaymentData = {
+        key: "23484225000166",
+        merchantName: "DIRECT API TEST",
+        merchantCity: "SAO PAULO",
+        amount: "99.99",
+        transactionId: "api-test-123"
+      };
+
+      const mockPaymentDataObject = { value: [] };
+      const mockPixCode =
+        "00020126360014BR.GOV.BCB.PIX0114234842250001665204000053039865405099.995802BR5917DIRECT API TEST6009SAO PAULO62450512api-test-12350300017BR.GOV.BCB.BRCODE01051.0.063041234";
+
+      PixCodec.createPayment.mockReturnValue(mockPaymentDataObject);
+      PixCodec.encode.mockReturnValue(mockPixCode);
+
+      loadScript.mockResolvedValue();
+
+      const element = createElement("c-qr-code-display", {
+        is: QrCodeDisplay
+      });
+      document.body.appendChild(element);
+
+      // Act
+      element.generatePixCodeFromPaymentData(mockPaymentData);
+
+      // Assert
+      expect(PixCodec.createPayment).toHaveBeenCalledWith({
+        key: "23484225000166",
+        merchantName: "DIRECT API TEST",
+        merchantCity: "SAO PAULO",
+        amount: "99.99",
+        transactionId: "api-test-123"
+      });
+      expect(PixCodec.encode).toHaveBeenCalledWith(mockPaymentDataObject);
+      expect(element.pixCode).toBe(mockPixCode);
+      expect(element.errorMessage).toBe("");
+    });
+
+    it("should handle null/undefined payment data gracefully", async () => {
+      // Arrange
+      loadScript.mockResolvedValue();
+
+      const element = createElement("c-qr-code-display", {
+        is: QrCodeDisplay
+      });
+      document.body.appendChild(element);
+
+      // Act & Assert - null
+      element.generatePixCodeFromPaymentData(null);
+      expect(PixCodec.createPayment).not.toHaveBeenCalled();
+
+      // Act & Assert - undefined
+      element.generatePixCodeFromPaymentData(undefined);
+      expect(PixCodec.createPayment).not.toHaveBeenCalled();
+
+      // Act & Assert - empty object
+      element.generatePixCodeFromPaymentData({});
+      expect(PixCodec.createPayment).not.toHaveBeenCalled();
+    });
+
+    it("should handle PixCodec errors when called directly", async () => {
+      // Arrange
+      const mockPaymentData = {
+        key: "invalid-direct-key",
+        merchantName: "ERROR TEST",
+        merchantCity: "ERROR CITY"
+      };
+
+      const mockError = new Error("Direct API call error");
+      PixCodec.createPayment.mockImplementation(() => {
+        throw mockError;
+      });
+
+      loadScript.mockResolvedValue();
+
+      const element = createElement("c-qr-code-display", {
+        is: QrCodeDisplay
+      });
+      document.body.appendChild(element);
+
+      // Act
+      element.generatePixCodeFromPaymentData(mockPaymentData);
+
+      // Assert
+      expect(element.errorMessage).toContain("Failed to generate PIX code");
+      expect(consoleErrorSpy).toHaveBeenCalledWith(
+        "PIX code generation error:",
+        mockError
+      );
+    });
+
+    it("should reset QR code generation flag when called directly", async () => {
+      // Arrange
+      const mockPaymentData = {
+        key: "23484225000166",
+        merchantName: "FLAG TEST",
+        merchantCity: "FLAG CITY",
+        amount: "10.00"
+      };
+
+      const mockPaymentDataObject = { value: [] };
+      const mockPixCode = "mock-pix-code-for-flag-test";
+
+      PixCodec.createPayment.mockReturnValue(mockPaymentDataObject);
+      PixCodec.encode.mockReturnValue(mockPixCode);
+
+      loadScript.mockResolvedValue();
+
+      const element = createElement("c-qr-code-display", {
+        is: QrCodeDisplay
+      });
+      document.body.appendChild(element);
+
+      // Act
+      element.generatePixCodeFromPaymentData(mockPaymentData);
+
+      // Assert - verify the method executed successfully by checking the result
+      expect(element.pixCode).toBe(mockPixCode);
+      expect(element.errorMessage).toBe("");
+      expect(PixCodec.createPayment).toHaveBeenCalled();
+      expect(PixCodec.encode).toHaveBeenCalled();
+    });
+
+    it("should work with minimal required fields only", async () => {
+      // Arrange
+      const minimalPaymentData = {
+        key: "23484225000166",
+        merchantName: "MINIMAL TEST",
+        merchantCity: "MINIMAL CITY"
+        // No amount or transactionId
+      };
+
+      const mockPaymentDataObject = { value: [] };
+      const mockPixCode = "minimal-pix-code";
+
+      PixCodec.createPayment.mockReturnValue(mockPaymentDataObject);
+      PixCodec.encode.mockReturnValue(mockPixCode);
+
+      loadScript.mockResolvedValue();
+
+      const element = createElement("c-qr-code-display", {
+        is: QrCodeDisplay
+      });
+      document.body.appendChild(element);
+
+      // Act
+      element.generatePixCodeFromPaymentData(minimalPaymentData);
+
+      // Assert
+      expect(PixCodec.createPayment).toHaveBeenCalledWith({
+        key: "23484225000166",
+        merchantName: "MINIMAL TEST",
+        merchantCity: "MINIMAL CITY",
+        amount: undefined,
+        transactionId: undefined
+      });
+      expect(element.pixCode).toBe(mockPixCode);
+    });
+  });
 });

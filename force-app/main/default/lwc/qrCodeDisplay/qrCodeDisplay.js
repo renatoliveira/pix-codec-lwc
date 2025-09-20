@@ -24,7 +24,7 @@ export default class QrCodeDisplay extends LightningElement {
   @api
   set paymentData(value) {
     this._paymentData = value;
-    this.generatePixCodeFromPaymentData();
+    this.generatePixCodeFromPaymentData(this._paymentData);
   }
 
   get paymentData() {
@@ -76,21 +76,22 @@ export default class QrCodeDisplay extends LightningElement {
   /**
    * Generates PIX code from payment data if provided
    */
-  generatePixCodeFromPaymentData() {
+  @api
+  generatePixCodeFromPaymentData(paymentData) {
     if (
-      this._paymentData &&
-      this._paymentData.key &&
-      this._paymentData.merchantName &&
-      this._paymentData.merchantCity
+      paymentData &&
+      paymentData.key &&
+      paymentData.merchantName &&
+      paymentData.merchantCity
     ) {
       try {
         // Create payment using PixCodec
         const paymentDataObject = PixCodec.createPayment({
-          key: this._paymentData.key,
-          merchantName: this._paymentData.merchantName,
-          merchantCity: this._paymentData.merchantCity,
-          amount: this._paymentData.amount,
-          transactionId: this._paymentData.transactionId
+          key: paymentData.key,
+          merchantName: paymentData.merchantName,
+          merchantCity: paymentData.merchantCity,
+          amount: paymentData.amount,
+          transactionId: paymentData.transactionId
         });
 
         // Encode to PIX string
@@ -189,7 +190,7 @@ export default class QrCodeDisplay extends LightningElement {
   // LWC-specific Functions
   connectedCallback() {
     this.loadQRCodeLibrary();
-    this.generatePixCodeFromPaymentData();
+    this.generatePixCodeFromPaymentData(this._paymentData);
   }
 
   renderedCallback() {
