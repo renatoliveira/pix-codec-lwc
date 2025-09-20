@@ -11,6 +11,23 @@
       "logFile": "${command:AskForLogFileName}",
       "stopOnEntry": true,
       "trace": true
+    },
+    {
+      "type": "node",
+      "name": "vscode-jest-tests.v2.pixCodec",
+      "request": "launch",
+      "args": [
+        "--runInBand",
+        "--watchAll=false",
+        "--testNamePattern",
+        "${jest.testNamePattern}",
+        "--runTestsByPath",
+        "${jest.testFile}"
+      ],
+      "cwd": "/Users/renatosilva/Documents/Projects/pixCodec",
+      "console": "integratedTerminal",
+      "internalConsoleOptions": "neverOpen",
+      "program": "/Users/renatosilva/Documents/Projects/pixCodec/node_modules/.bin/jest"
     }
   ]
 }
