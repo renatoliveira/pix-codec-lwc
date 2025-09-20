@@ -29,7 +29,7 @@ To use it as a display only, generate the PIX code and pass it onto the `pixCode
 
 ```html
 <c-qr-code-display
-  pix-code="{pixCode}"
+  pix-code={pixCode}
   show-qr-code
   show-code
 ></c-qr-code-display>
@@ -39,7 +39,7 @@ To use it with payment data, pass a payment data object to the `paymentData` att
 
 ```html
 <c-qr-code-display
-  payment-data="{paymentData}"
+  payment-data={paymentData}
   show-qr-code
   show-code
 ></c-qr-code-display>
