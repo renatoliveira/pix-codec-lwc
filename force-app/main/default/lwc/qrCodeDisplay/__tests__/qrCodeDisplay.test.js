@@ -6,7 +6,17 @@ jest.mock("lightning/platformResourceLoader", () => ({
   loadScript: jest.fn()
 }));
 
+// Mock the PixCodec
+jest.mock("../pixCodec", () => ({
+  __esModule: true,
+  default: {
+    createPayment: jest.fn(),
+    encode: jest.fn()
+  }
+}));
+
 import { loadScript } from "lightning/platformResourceLoader";
+import PixCodec from "../pixCodec";
 
 describe("c-qr-code-display", () => {
   let consoleErrorSpy;
@@ -17,6 +27,10 @@ describe("c-qr-code-display", () => {
 
     // Reset all mocks
     jest.clearAllMocks();
+
+    // Reset PixCodec mocks
+    PixCodec.createPayment.mockClear();
+    PixCodec.encode.mockClear();
 
     // Clean up window.encodeQR
     delete window.encodeQR;
@@ -109,5 +123,98 @@ describe("c-qr-code-display", () => {
     expect(element.isLoading).toBe(false);
     expect(element.errorMessage).toBeTruthy();
     expect(element.errorMessage).toContain("Failed to load QR code library");
+  });
+
+  it("should generate PIX code from payment data using PixCodec", async () => {
+    // Arrange
+    const mockPaymentData = {
+      key: "23484225000166",
+      merchantName: "WISEFOX",
+      merchantCity: "BELO HORIZONTE",
+      amount: "123.45",
+      transactionId: "ref1234"
+    };
+
+    const mockPaymentDataObject = { value: [] };
+    const mockPixCode =
+      "00020126360014BR.GOV.BCB.PIX0114234842250001665204000053039865406123.455802BR5907WISEFOX6014BELO HORIZONTE62450507ref123450300017BR.GOV.BCB.BRCODE01051.0.063040D3F";
+
+    PixCodec.createPayment.mockReturnValue(mockPaymentDataObject);
+    PixCodec.encode.mockReturnValue(mockPixCode);
+
+    loadScript.mockResolvedValue();
+
+    const element = createElement("c-qr-code-display", {
+      is: QrCodeDisplay
+    });
+
+    // Act
+    element.paymentData = mockPaymentData;
+    document.body.appendChild(element);
+
+    // Assert
+    expect(PixCodec.createPayment).toHaveBeenCalledWith({
+      key: "23484225000166",
+      merchantName: "WISEFOX",
+      merchantCity: "BELO HORIZONTE",
+      amount: "123.45",
+      transactionId: "ref1234"
+    });
+    expect(PixCodec.encode).toHaveBeenCalledWith(mockPaymentDataObject);
+    expect(element.pixCode).toBe(mockPixCode);
+  });
+
+  it("should handle PixCodec errors gracefully", async () => {
+    // Arrange
+    const mockPaymentData = {
+      key: "invalid-key",
+      merchantName: "TEST",
+      merchantCity: "TEST CITY"
+    };
+
+    const mockError = new Error("Invalid PIX key");
+    PixCodec.createPayment.mockImplementation(() => {
+      throw mockError;
+    });
+
+    loadScript.mockResolvedValue();
+
+    const element = createElement("c-qr-code-display", {
+      is: QrCodeDisplay
+    });
+
+    // Act
+    element.paymentData = mockPaymentData;
+    document.body.appendChild(element);
+
+    // Assert
+    expect(element.errorMessage).toContain("Failed to generate PIX code");
+    expect(consoleErrorSpy).toHaveBeenCalledWith(
+      "PIX code generation error:",
+      mockError
+    );
+  });
+
+  it("should not generate PIX code if required payment data fields are missing", async () => {
+    // Arrange
+    const incompletePaymentData = {
+      key: "23484225000166"
+      // Missing merchantName and merchantCity
+    };
+
+    loadScript.mockResolvedValue();
+
+    const element = createElement("c-qr-code-display", {
+      is: QrCodeDisplay
+    });
+
+    // Act
+    element.paymentData = incompletePaymentData;
+    document.body.appendChild(element);
+
+    // Assert
+    expect(PixCodec.createPayment).not.toHaveBeenCalled();
+    expect(PixCodec.encode).not.toHaveBeenCalled();
+    expect(element.pixCode).toBeUndefined();
   });
 });

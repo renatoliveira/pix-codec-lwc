@@ -2,17 +2,34 @@ import { LightningElement, api, track } from "lwc";
 import { loadScript } from "lightning/platformResourceLoader";
 import { ShowToastEvent } from "lightning/platformShowToastEvent";
 import QRCode from "@salesforce/resourceUrl/qr";
+import PixCodec from "./pixCodec";
 
 export default class QrCodeDisplay extends LightningElement {
+  // Attributes
   @api showQRCode = false;
   @api showPixCode = false;
   @api qrCodeSize = 200;
   @api pixCode;
+  _paymentData;
+  _lastPixCode; // Track the last generated PIX code to know when to regenerate QR
   value;
-
   @track qrCodeGenerated = false;
   @track _errorMessage = "";
   @track _isLoading = false;
+  qrCodeLibraryEncode;
+  qrCodeContainer;
+
+  // Getters and Setters
+  // Watcher for paymentData changes
+  @api
+  set paymentData(value) {
+    this._paymentData = value;
+    this.generatePixCodeFromPaymentData();
+  }
+
+  get paymentData() {
+    return this._paymentData;
+  }
 
   @api
   get errorMessage() {
@@ -24,21 +41,68 @@ export default class QrCodeDisplay extends LightningElement {
     return this._isLoading;
   }
 
-  qrCodeLibraryEncode;
-  qrCodeContainer;
-
-  connectedCallback() {
-    this.loadQRCodeLibrary();
+  // Getters for conditional rendering
+  get shouldShowQRCode() {
+    return this.showQRCode && this.pixCode && !this._isLoading;
   }
 
-  renderedCallback() {
+  get shouldShowPixCode() {
+    return this.showPixCode && this.pixCode;
+  }
+
+  get hasError() {
+    return this._errorMessage !== "";
+  }
+
+  // Public Functions (@api)
+  @api copyPixCode() {
+    if (!this.pixCode) {
+      this.showToast("Error", "No PIX code to copy", "error");
+      return;
+    }
+
+    navigator.clipboard
+      .writeText(this.pixCode)
+      .then(() => {
+        this.showToast("Success", "PIX code copied to clipboard", "success");
+      })
+      .catch((error) => {
+        console.error("Copy failed:", error);
+        this.showToast("Error", "Failed to copy PIX code", "error");
+      });
+  }
+
+  // Private Functions
+  /**
+   * Generates PIX code from payment data if provided
+   */
+  generatePixCodeFromPaymentData() {
     if (
-      this.qrCodeLibraryEncode &&
-      this.pixCode &&
-      this.showQRCode &&
-      !this.qrCodeGenerated
+      this._paymentData &&
+      this._paymentData.key &&
+      this._paymentData.merchantName &&
+      this._paymentData.merchantCity
     ) {
-      this.generateQRCode();
+      try {
+        // Create payment using PixCodec
+        const paymentDataObject = PixCodec.createPayment({
+          key: this._paymentData.key,
+          merchantName: this._paymentData.merchantName,
+          merchantCity: this._paymentData.merchantCity,
+          amount: this._paymentData.amount,
+          transactionId: this._paymentData.transactionId
+        });
+
+        // Encode to PIX string
+        this.pixCode = PixCodec.encode(paymentDataObject);
+        this._errorMessage = "";
+
+        // Reset QR code generation flag so it regenerates
+        this.qrCodeGenerated = false;
+      } catch (error) {
+        this._errorMessage = "Failed to generate PIX code: " + error.message;
+        console.error("PIX code generation error:", error);
+      }
     }
   }
 
@@ -105,28 +169,12 @@ export default class QrCodeDisplay extends LightningElement {
       }
 
       this.qrCodeGenerated = true;
+      this._lastPixCode = this.pixCode; // Track the last generated PIX code
       this._errorMessage = "";
     } catch (error) {
       this._errorMessage = "Failed to generate QR code: " + error.message;
       console.error("QR Code generation error:", error);
     }
-  }
-
-  @api copyPixCode() {
-    if (!this.pixCode) {
-      this.showToast("Error", "No PIX code to copy", "error");
-      return;
-    }
-
-    navigator.clipboard
-      .writeText(this.pixCode)
-      .then(() => {
-        this.showToast("Success", "PIX code copied to clipboard", "success");
-      })
-      .catch((error) => {
-        console.error("Copy failed:", error);
-        this.showToast("Error", "Failed to copy PIX code", "error");
-      });
   }
 
   showToast(title, message, variant) {
@@ -138,16 +186,20 @@ export default class QrCodeDisplay extends LightningElement {
     this.dispatchEvent(event);
   }
 
-  // Getters for conditional rendering
-  get shouldShowQRCode() {
-    return this.showQRCode && this.pixCode && !this._isLoading;
+  // LWC-specific Functions
+  connectedCallback() {
+    this.loadQRCodeLibrary();
+    this.generatePixCodeFromPaymentData();
   }
 
-  get shouldShowPixCode() {
-    return this.showPixCode && this.pixCode;
-  }
-
-  get hasError() {
-    return this._errorMessage !== "";
+  renderedCallback() {
+    if (
+      this.qrCodeLibraryEncode &&
+      this.pixCode &&
+      this.showQRCode &&
+      (this._lastPixCode !== this.pixCode || !this.qrCodeGenerated)
+    ) {
+      this.generateQRCode();
+    }
   }
 }
